@@ -41,6 +41,16 @@ function onEdit(e) {
   var faixa = aba.getRange(primeira, colAuto, n, 3);
   var finais = faixa.getValues().map(function (l) { return [statusFinal(l[0], l[1])]; });
   aba.getRange(primeira, colAuto + 2, n, 1).setValues(finais);
+
+  var largura = COLUNAS_CANDIDATURAS.length;
+  var colEtapa = COLUNAS_CANDIDATURAS.indexOf('Etapa atual') + 1;
+  var etapas = aba.getRange(primeira, colEtapa, n, 1).getValues();
+  aba.getRange(primeira, 1, n, largura).setBackgrounds(finais.map(function (f, k) {
+    var cor = corDaLinha(f[0], etapas[k][0]);
+    var linha = [];
+    for (var c = 0; c < largura; c++) linha.push(cor);
+    return linha;
+  }));
 }
 
 function sincronizarPeloMenu() {
@@ -98,7 +108,8 @@ function calcular() {
   if (!origem) throw new Error('Aba "' + ABA_ORIGEM + '" não encontrada. Nada foi alterado.');
 
   var agora = new Date();
-  var candidaturas = lerCandidaturas(origem.getDataRange().getDisplayValues(), ANO_PADRAO, agora);
+  var faixa = origem.getDataRange();
+  var candidaturas = lerCandidaturas(faixa.getDisplayValues(), ANO_PADRAO, agora, faixa.getBackgrounds());
   var abaCand = ss.getSheetByName(ABA_CANDIDATURAS);
   var anteriores = abaCand && abaCand.getLastRow() > 0 ? abaCand.getDataRange().getValues() : [];
   var mescla = mesclarComAnteriores(candidaturas, anteriores);
@@ -119,6 +130,10 @@ function escreverCandidaturas(ss, linhas) {
 
   var n = linhas.length;
   aba.getRange(2, 1, n, cols.length).setValues(linhas);
+  aba.getRange(2, 1, n, cols.length).setBackgrounds(linhas.map(function (l) {
+    var cor = corDaLinha(l[idx['Status final'] - 1], l[idx['Etapa atual'] - 1]);
+    return cols.map(function () { return cor; });
+  }));
 
   ['1ª conversa', 'Data última etapa', 'Próxima etapa'].forEach(function (nome) {
     aba.getRange(2, idx[nome], n, 1).setNumberFormat(FORMATO_DATA_HORA);
@@ -196,7 +211,7 @@ function escreverAgenda(ss, itens) {
   aba.getRange(2, 1, linhas.length, cab.length).setValues(linhas);
   aba.getRange(2, 1, linhas.length, 1).setNumberFormat(FORMATO_DATA_HORA);
   linhas.forEach(function (l, k) {
-    if (l[1] === 'Hoje' || l[1] === 'Amanhã') aba.getRange(k + 2, 1, 1, cab.length).setBackground('#fff4c2');
+    if (l[1] === 'Hoje' || l[1] === 'Amanhã') aba.getRange(k + 2, 1, 1, cab.length).setBackground('#cfe2f3');
     else if (l[0] < hoje) aba.getRange(k + 2, 1, 1, cab.length).setFontColor('#888888');
   });
   aba.autoResizeColumns(1, cab.length);
@@ -219,7 +234,7 @@ function limparSobras(aba, ultimaLinha, largura) {
   var max = aba.getMaxRows();
   if (max > ultimaLinha) {
     var resto = aba.getRange(ultimaLinha + 1, 1, max - ultimaLinha, largura);
-    resto.clearContent().clearDataValidations();
+    resto.clearContent().clearDataValidations().setBackground(null);
   }
 }
 

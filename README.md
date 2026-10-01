@@ -8,7 +8,7 @@ A partir de uma aba "livre", preenchida à mão, o script mantém três abas sin
 | --- | --- |
 | **Candidaturas** | Uma linha por candidatura: etapa atual, datas, próxima etapa, status e dias parado. As colunas `Status (manual)`, `Próximo passo ✍️` e `Notas ✍️` são suas e o script as preserva. |
 | **Painel** | Totais, contagem por status, funil por etapa (com gráfico) e candidaturas paradas há mais de 14 dias. |
-| **Agenda** | Entrevistas dos últimos 7 dias e dos próximos 30, com hoje e amanhã destacados. |
+| **Agenda** | Entrevistas dos últimos 7 dias e dos próximos 30, com hoje e amanhã destacados em azul. |
 
 Além disso, envia **um e-mail por dia por volta das 6h** com as entrevistas de hoje e de amanhã e as candidaturas paradas. Se não houver nada, o e-mail não é enviado.
 
@@ -28,12 +28,15 @@ Cada candidatura é identificada por **Empresa + Cargo**, sem diferenciar maiús
 
 | Status | Origem |
 | --- | --- |
+| `Reprovado` | automático: célula **Empresa** pintada de vermelho (qualquer tom) na aba de origem |
 | `Agendado` | automático: há etapa com data futura |
 | `Aguardando retorno` | automático: última etapa há 14 dias ou menos |
 | `Sem resposta` | automático: última etapa há mais de 14 dias |
 | `Reprovado`, `Desisti`, `Oferta`, `Contratado` | manual, pela coluna `Status (manual)` |
 
-O status manual sempre tem prioridade. `Reprovado`, `Desisti` e `Contratado` contam como encerradas e saem da Agenda e dos alertas.
+O status manual sempre tem prioridade, inclusive sobre a cor. `Reprovado`, `Desisti` e `Contratado` contam como encerradas e saem da Agenda e dos alertas.
+
+Na aba Candidaturas, as linhas são pintadas com o mesmo código de cores: **vermelho** para encerradas e **amarelo** para quem chegou à Etapa 2 ou além. As cores se atualizam a cada sincronização e na hora em que você edita o `Status (manual)`.
 
 ## Arquitetura
 

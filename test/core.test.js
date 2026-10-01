@@ -160,3 +160,51 @@ test('montarResumoDiario lista hoje/amanhã e paradas; null quando vazio', () =>
   const vazio = core.lerCandidaturas([CABECALHO], 2026, AGORA);
   assert.equal(core.montarResumoDiario(vazio, {}, AGORA, fmt), null);
 });
+
+test('corEhVermelha reconhece tons de vermelho e ignora o resto', () => {
+  for (const cor of ['#f4cccc', '#ea9999', '#ff0000', '#cc0000', '#990000']) {
+    assert.equal(core.corEhVermelha(cor), true, cor);
+  }
+  for (const cor of ['#ffffff', '#fff2cc', '#ffff00', '#ead1dc', '#efefef', '#000000', '', null]) {
+    assert.equal(core.corEhVermelha(cor), false, String(cor));
+  }
+});
+
+test('Empresa em vermelho na origem vira Reprovado e sai da Agenda e das paradas', () => {
+  const linhas = fixture();
+  const cores = linhas.map(l => l.map(() => '#ffffff'));
+  cores[2][0] = '#f4cccc'; // Recente
+  cores[3][0] = '#f4cccc'; // primeira "Antiga" (parada há 30 dias)
+  const cs = core.lerCandidaturas(linhas, 2026, AGORA, cores);
+  const por = Object.fromEntries(cs.map(c => [c.chave, c]));
+  assert.equal(por['recente|sre'].statusAuto, core.STATUS.REPROVADO);
+  assert.equal(por['antiga|'].statusAuto, core.STATUS.REPROVADO);
+  assert.equal(por['agendada|devops'].statusAuto, core.STATUS.AGENDADO);
+
+  const { status } = core.mesclarComAnteriores(cs, []);
+  assert.ok(!core.montarAgenda(cs, status, AGORA).some(x => x.empresa === 'Recente'));
+  const p = core.montarPainel(cs, status);
+  assert.deepEqual(p.paradas.map(x => x[0]), ['Antiga'], 'só a Antiga não pintada continua parada');
+  assert.deepEqual(p.totais[1], ['Encerradas', 2]);
+});
+
+test('Status (manual) vence a cor vermelha', () => {
+  const linhas = fixture();
+  const cores = linhas.map(l => l.map(() => ''));
+  cores[2][0] = '#f4cccc';
+  const cs = core.lerCandidaturas(linhas, 2026, AGORA, cores);
+  const cols = core.COLUNAS_CANDIDATURAS;
+  const i = Object.fromEntries(cols.map((n, k) => [n, k]));
+  const anteriores = [cols].concat(core.mesclarComAnteriores(cs, []).linhas.map(l => l.slice()));
+  anteriores.find(l => l[i['Empresa']] === 'Recente')[i['Status (manual)']] = core.STATUS.OFERTA;
+  const { status } = core.mesclarComAnteriores(cs, anteriores);
+  assert.equal(status['recente|sre'], core.STATUS.OFERTA);
+});
+
+test('corDaLinha: vermelho para encerradas, amarelo da Etapa 2 em diante', () => {
+  assert.equal(core.corDaLinha(core.STATUS.REPROVADO, 'Etapa 3'), '#f4cccc');
+  assert.equal(core.corDaLinha(core.STATUS.DESISTI, '1ª conversa'), '#f4cccc');
+  assert.equal(core.corDaLinha(core.STATUS.AGENDADO, 'Etapa 2 — teste técnico'), '#fff2cc');
+  assert.equal(core.corDaLinha(core.STATUS.OFERTA, 'Etapa 3'), '#fff2cc');
+  assert.equal(core.corDaLinha(core.STATUS.AGUARDANDO, '1ª conversa'), null);
+});

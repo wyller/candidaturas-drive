@@ -140,9 +140,10 @@ function mapearColunasOrigem(cabecalho) {
 
 /**
  * Converte as linhas da aba de origem (valores exibidos, cabeçalho incluso) em
- * candidaturas. `agora` define o que é passado e futuro.
+ * candidaturas. `agora` define o que é passado e futuro. `cores` (opcional) é a
+ * matriz de cores de fundo da mesma faixa: Empresa em vermelho = reprovada.
  */
-function lerCandidaturas(linhas, anoPadrao, agora) {
+function lerCandidaturas(linhas, anoPadrao, agora, cores) {
   var cols = mapearColunasOrigem(linhas[0]);
   var vistas = {};
   var resultado = [];
@@ -169,6 +170,7 @@ function lerCandidaturas(linhas, anoPadrao, agora) {
       primeira: primeira,
       etapas: etapas,
       linhaOrigem: i + 1,
+      vermelha: Boolean(cores && cores[i] && corEhVermelha(cores[i][cols.empresa])),
     }, agora));
   }
   return resultado;
@@ -190,7 +192,8 @@ function resumirCandidatura(c, agora) {
   c.linkUltimaEtapa = ultima.link;
   c.diasParado = !c.proximaEtapa && c.dataUltimaEtapa ? diasEntre(c.dataUltimaEtapa, agora) : null;
 
-  if (c.proximaEtapa) c.statusAuto = STATUS.AGENDADO;
+  if (c.vermelha) c.statusAuto = STATUS.REPROVADO;
+  else if (c.proximaEtapa) c.statusAuto = STATUS.AGENDADO;
   else if (c.diasParado != null && c.diasParado > DIAS_SEM_RESPOSTA) c.statusAuto = STATUS.SEM_RESPOSTA;
   else c.statusAuto = STATUS.AGUARDANDO;
   return c;
@@ -202,6 +205,36 @@ function statusFinal(statusAuto, statusManual) {
 
 function estaEncerrada(status) {
   return STATUS_ENCERRADOS.indexOf(status) >= 0;
+}
+
+/**
+ * "#f4cccc", "#ff0000", "#cc0000"... → true. Qualquer tom de vermelho da paleta,
+ * claro ou escuro; branco, cinza, rosa-lilás e amarelo → false.
+ */
+function corEhVermelha(hex) {
+  var m = String(hex || '').trim().match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return false;
+  var r = parseInt(m[1], 16) / 255;
+  var g = parseInt(m[2], 16) / 255;
+  var b = parseInt(m[3], 16) / 255;
+  var max = Math.max(r, g, b);
+  var min = Math.min(r, g, b);
+  if (max !== r || max === min) return false;
+  var luz = (max + min) / 2;
+  var saturacao = (max - min) / (1 - Math.abs(2 * luz - 1));
+  var matiz = (60 * ((g - b) / (max - min)) + 360) % 360;
+  return saturacao >= 0.25 && (matiz <= 15 || matiz >= 345);
+}
+
+var COR_ENCERRADA = '#f4cccc';
+var COR_FASE_2 = '#fff2cc';
+
+/** Cor da linha na aba Candidaturas: vermelho encerrada, amarelo Etapa 2+, senão nenhuma. */
+function corDaLinha(statusFinalDaLinha, etapaAtual) {
+  if (estaEncerrada(statusFinalDaLinha)) return COR_ENCERRADA;
+  var m = String(etapaAtual || '').match(/^Etapa (\d+)/);
+  if (m && Number(m[1]) >= 2) return COR_FASE_2;
+  return null;
 }
 
 /**
@@ -391,5 +424,7 @@ if (typeof module !== 'undefined') {
     montarPainel: montarPainel,
     montarAgenda: montarAgenda,
     montarResumoDiario: montarResumoDiario,
+    corEhVermelha: corEhVermelha,
+    corDaLinha: corDaLinha,
   };
 }
