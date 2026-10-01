@@ -23,6 +23,26 @@ function onOpen() {
     .addToUi();
 }
 
+/**
+ * Mantém "Status final" em dia quando você edita "Status (manual)", sem
+ * esperar a próxima sincronização. (Fórmula ali dava #ERROR! na planilha.)
+ */
+function onEdit(e) {
+  var aba = e.range.getSheet();
+  if (aba.getName() !== ABA_CANDIDATURAS) return;
+  var colAuto = COLUNAS_CANDIDATURAS.indexOf('Status (auto)') + 1;
+  var colManual = COLUNAS_CANDIDATURAS.indexOf('Status (manual)') + 1;
+  if (e.range.getColumn() > colManual || e.range.getLastColumn() < colManual) return;
+
+  var primeira = Math.max(e.range.getRow(), 2);
+  var n = e.range.getLastRow() - primeira + 1;
+  if (n < 1) return;
+  // Status (auto), Status (manual) e Status final são colunas vizinhas.
+  var faixa = aba.getRange(primeira, colAuto, n, 3);
+  var finais = faixa.getValues().map(function (l) { return [statusFinal(l[0], l[1])]; });
+  aba.getRange(primeira, colAuto + 2, n, 1).setValues(finais);
+}
+
 function sincronizarPeloMenu() {
   var r = sincronizar();
   SpreadsheetApp.getActive().toast(r.total + ' candidaturas sincronizadas.', 'Candidaturas', 5);
@@ -99,8 +119,6 @@ function escreverCandidaturas(ss, linhas) {
 
   var n = linhas.length;
   aba.getRange(2, 1, n, cols.length).setValues(linhas);
-  // Status final como fórmula: muda na hora em que você edita o Status (manual).
-  aba.getRange(2, idx['Status final'], n, 1).setFormulaR1C1('=IF(R[0]C[-1]<>"",R[0]C[-1],R[0]C[-2])');
 
   ['1ª conversa', 'Data última etapa', 'Próxima etapa'].forEach(function (nome) {
     aba.getRange(2, idx[nome], n, 1).setNumberFormat(FORMATO_DATA_HORA);
