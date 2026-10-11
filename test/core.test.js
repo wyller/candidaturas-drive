@@ -47,6 +47,43 @@ test('lerEtapas lê trios em sequência e transforma texto livre em nota', () =>
   assert.deepEqual(etapas[1].data, new Date(2026, 8, 29, 14, 0));
 });
 
+test('lerEtapas não depende de trios alinhados: Fase 3 fora do passo de 3 colunas', () => {
+  // Fase 2 ocupa 10 colunas; a Fase 3 começa na 11ª, com data e link mas sem hora.
+  const fases = ['08/10', '09:30', 'https://mail.exemplo/fase2', '', '', '', '', '', '', '',
+    '13/10', 'https://mail.exemplo/fase3'];
+  const etapas = core.lerEtapas(fases, 2026);
+  assert.equal(etapas.length, 2);
+  assert.deepEqual(etapas[0].data, new Date(2026, 9, 8, 9, 30));
+  assert.equal(etapas[1].numero, 3);
+  assert.deepEqual(etapas[1].data, new Date(2026, 9, 13));
+  assert.equal(etapas[1].semHora, true);
+  assert.equal(etapas[1].nota, '');
+  assert.equal(etapas[1].link, 'https://mail.exemplo/fase3');
+});
+
+test('lerEtapas: texto que só começa com número não vira horário', () => {
+  const [etapa] = core.lerEtapas(['29/09', '2 entrevistas no mesmo dia', 'https://meet.google.com/x'], 2026);
+  assert.equal(etapa.semHora, true);
+  assert.equal(etapa.nota, '2 entrevistas no mesmo dia');
+});
+
+test('etapa sem horário conta como agendada até o fim do dia e entra na Agenda', () => {
+  const fases = ['08/10', '09:30', 'https://mail.exemplo/fase2', '', '', '', '', '', '', '',
+    '13/10', 'https://mail.exemplo/fase3'];
+  const linhas = [CABECALHO, linha({ empresa: 'Exemplo', data: '02/10', hora: '14:00', cargo: 'DevOps' }, fases)];
+  for (const agora of [new Date(2026, 9, 11, 20, 0), new Date(2026, 9, 13, 18, 0)]) {
+    const [c] = core.lerCandidaturas(linhas, 2026, agora);
+    assert.equal(c.statusAuto, core.STATUS.AGENDADO);
+    assert.deepEqual(c.proximaEtapa, new Date(2026, 9, 13));
+    assert.equal(c.etapaAtual, 'Etapa 3 (horário a definir)');
+    const agenda = core.montarAgenda([c], {}, agora);
+    assert.equal(agenda.at(-1).etapa, 'Etapa 3 (horário a definir)');
+  }
+  const [depois] = core.lerCandidaturas(linhas, 2026, new Date(2026, 9, 14, 8, 0));
+  assert.equal(depois.statusAuto, core.STATUS.AGUARDANDO);
+  assert.deepEqual(depois.dataUltimaEtapa, new Date(2026, 9, 13));
+});
+
 test('chave ignora maiúsculas, acentos e espaços', () => {
   assert.equal(core.chaveCandidatura(' Acme  ', 'Engenheiro DevOps'),
     core.chaveCandidatura('acme', 'engenheiro devops'));

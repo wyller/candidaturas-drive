@@ -83,33 +83,58 @@ function pareceLink(texto) {
 }
 
 /**
- * Lê as colunas de fases em trios Data | Hora | Link, da esquerda para a direita.
- * Trios vazios são pulados; os preenchidos viram Etapa 2, 3, ... em sequência.
- * Um trio que não começa com data vira nota da etapa.
+ * Lê as colunas de fases da esquerda para a direita pelo conteúdo, sem depender
+ * de alinhamento em trios (os blocos "Fase 2"/"Fase 3" não têm largura múltipla
+ * de 3). Uma data abre nova etapa; hora e link completam a etapa aberta; o link
+ * fecha a etapa. Texto livre vira nota da etapa aberta ou abre uma etapa sem data.
  */
 function lerEtapas(celulas, anoPadrao) {
   var etapas = [];
-  for (var i = 0; i < celulas.length; i += 3) {
-    var trio = celulas.slice(i, i + 3).map(function (c) { return String(c == null ? '' : c).trim(); });
-    if (trio.every(function (c) { return c === ''; })) continue;
-    var numero = etapas.length + 2;
-    var data = montarDataHora(trio[0], trio[1], anoPadrao);
-    if (data) {
-      etapas.push({ numero: numero, data: data, nota: '', link: trio[2] || '' });
-    } else {
-      etapas.push({
-        numero: numero,
-        data: null,
-        nota: trio.filter(function (c) { return c && !pareceLink(c); }).join(' · '),
-        link: trio.filter(pareceLink)[0] || '',
-      });
-    }
+  var aberta = null;
+  function abrir() {
+    aberta = { numero: etapas.length + 2, data: null, nota: '', link: '', semHora: false };
+    etapas.push(aberta);
+    return aberta;
   }
+  celulas.forEach(function (c) {
+    var texto = String(c == null ? '' : c).trim();
+    if (!texto) return;
+    var data = lerData(texto, anoPadrao);
+    if (data) {
+      abrir();
+      aberta.data = new Date(data.y, data.m - 1, data.d);
+      aberta.semHora = true;
+    } else if (pareceLink(texto) || (aberta && aberta.data && !aberta.semHora)) {
+      // Depois de data + hora, a célula seguinte é o "link", como no trio (pode ser "por telefone").
+      (aberta || abrir()).link = texto;
+      aberta = null;
+    } else if (aberta && aberta.data && aberta.semHora && pareceHora(texto)) {
+      var hora = lerHora(texto);
+      aberta.data.setHours(hora.h, hora.min);
+      aberta.semHora = false;
+    } else {
+      var etapa = aberta || abrir();
+      etapa.nota = etapa.nota ? etapa.nota + ' · ' + texto : texto;
+    }
+  });
   return etapas;
+}
+
+/** "14:00", "10h", "5pm..." — mas não "2 entrevistas". */
+function pareceHora(texto) {
+  return /^\d{1,2}(?::\d{2}|h|\s*(?:am|pm))/i.test(texto) && lerHora(texto) != null;
+}
+
+/** Etapa ainda por acontecer. Sem horário, vale até o fim do dia. */
+function etapaFutura(etapa, agora) {
+  if (!etapa.data) return false;
+  if (etapa.semHora) return etapa.data >= inicioDoDia(agora);
+  return etapa.data > agora;
 }
 
 function rotuloEtapa(etapa) {
   var base = etapa.numero === 1 ? '1ª conversa' : 'Etapa ' + etapa.numero;
+  if (etapa.semHora) base += ' (horário a definir)';
   return etapa.nota ? base + ' — ' + etapa.nota : base;
 }
 
@@ -180,9 +205,9 @@ function lerCandidaturas(linhas, anoPadrao, agora, cores) {
 function resumirCandidatura(c, agora) {
   var preenchidas = c.etapas.filter(function (e) { return e.data || e.nota || e.link; });
   var ultima = preenchidas[preenchidas.length - 1] || c.etapas[0];
-  var passadas = c.etapas.filter(function (e) { return e.data && e.data <= agora; });
+  var passadas = c.etapas.filter(function (e) { return e.data && !etapaFutura(e, agora); });
   var futuras = c.etapas
-    .filter(function (e) { return e.data && e.data > agora; })
+    .filter(function (e) { return etapaFutura(e, agora); })
     .sort(function (a, b) { return a.data - b.data; });
 
   c.etapaAtual = rotuloEtapa(ultima);

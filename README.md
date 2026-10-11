@@ -16,10 +16,11 @@ A aba de origem **nunca é alterada**.
 
 ## Como a aba de origem é lida
 
-Colunas encontradas pelo cabeçalho: `Empresa | Data | Horario | Cargo | RH | link da reunião`. Tudo o que vem depois de `link da reunião` são as etapas seguintes, lidas em **trios `Data | Hora | Link`**, da esquerda para a direita:
+Colunas encontradas pelo cabeçalho: `Empresa | Data | Horario | Cargo | RH | link da reunião`. Tudo o que vem depois de `link da reunião` são as etapas seguintes, lidas **pelo conteúdo** da esquerda para a direita (os blocos "Fase 2", "Fase 3" podem ter qualquer largura; não precisa alinhar em trios):
 
-- cada trio preenchido vira Etapa 2, 3, 4...;
-- um trio que não começa com data (por exemplo, "concluído o teste técnico") vira **nota** da etapa;
+- cada **data** abre uma nova etapa (Etapa 2, 3, 4...); a hora e o link logo depois completam essa etapa;
+- data **sem hora** (`13/10` seguida do link) vale como agendada até o fim do dia e aparece como `Etapa N (horário a definir)`;
+- texto livre sem data (por exemplo, "concluído o teste técnico") vira **nota** da etapa;
 - datas sem ano (`01/09`) contam como 2026; horários aceitos: `14:00`, `10h`, `9:30h`, `5pm – 5:40pm`.
 
 Cada candidatura é identificada por **Empresa + Cargo**, sem diferenciar maiúsculas, acentos ou espaços. Se uma candidatura sumir da origem, ela continua na aba Candidaturas marcada como `Removida da origem`.
