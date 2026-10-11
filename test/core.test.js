@@ -61,6 +61,16 @@ test('lerEtapas não depende de trios alinhados: Fase 3 fora do passo de 3 colun
   assert.equal(etapas[1].link, 'https://mail.exemplo/fase3');
 });
 
+test('lerEtapas aceita a hora depois do link', () => {
+  const etapas = core.lerEtapas(['08/10', '09:30', 'https://mail.exemplo/fase2', '', '', '', '', '', '', '',
+    '13/10', 'https://mail.exemplo/fase3', '10:00'], 2026);
+  assert.equal(etapas.length, 2);
+  assert.deepEqual(etapas[1].data, new Date(2026, 9, 13, 10, 0));
+  assert.equal(etapas[1].semHora, false);
+  assert.equal(etapas[1].link, 'https://mail.exemplo/fase3');
+  assert.equal(etapas[1].nota, '');
+});
+
 test('lerEtapas: texto que só começa com número não vira horário', () => {
   const [etapa] = core.lerEtapas(['29/09', '2 entrevistas no mesmo dia', 'https://meet.google.com/x'], 2026);
   assert.equal(etapa.semHora, true);

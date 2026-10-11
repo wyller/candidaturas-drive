@@ -18,7 +18,7 @@ A aba de origem **nunca é alterada**.
 
 Colunas encontradas pelo cabeçalho: `Empresa | Data | Horario | Cargo | RH | link da reunião`. Tudo o que vem depois de `link da reunião` são as etapas seguintes, lidas **pelo conteúdo** da esquerda para a direita (os blocos "Fase 2", "Fase 3" podem ter qualquer largura; não precisa alinhar em trios):
 
-- cada **data** abre uma nova etapa (Etapa 2, 3, 4...); a hora e o link logo depois completam essa etapa;
+- cada **data** abre uma nova etapa (Etapa 2, 3, 4...); a hora e o link logo depois completam essa etapa, em qualquer ordem;
 - data **sem hora** (`13/10` seguida do link) vale como agendada até o fim do dia e aparece como `Etapa N (horário a definir)`;
 - texto livre sem data (por exemplo, "concluído o teste técnico") vira **nota** da etapa;
 - datas sem ano (`01/09`) contam como 2026; horários aceitos: `14:00`, `10h`, `9:30h`, `5pm – 5:40pm`.

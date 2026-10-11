@@ -85,8 +85,8 @@ function pareceLink(texto) {
 /**
  * Lê as colunas de fases da esquerda para a direita pelo conteúdo, sem depender
  * de alinhamento em trios (os blocos "Fase 2"/"Fase 3" não têm largura múltipla
- * de 3). Uma data abre nova etapa; hora e link completam a etapa aberta; o link
- * fecha a etapa. Texto livre vira nota da etapa aberta ou abre uma etapa sem data.
+ * de 3). Uma data abre nova etapa; hora e link completam a etapa aberta, em
+ * qualquer ordem. Texto livre vira nota da etapa aberta ou abre uma etapa sem data.
  */
 function lerEtapas(celulas, anoPadrao) {
   var etapas = [];
@@ -104,10 +104,12 @@ function lerEtapas(celulas, anoPadrao) {
       abrir();
       aberta.data = new Date(data.y, data.m - 1, data.d);
       aberta.semHora = true;
-    } else if (pareceLink(texto) || (aberta && aberta.data && !aberta.semHora)) {
+    } else if (pareceLink(texto) || (aberta && aberta.data && !aberta.semHora && !aberta.link)) {
       // Depois de data + hora, a célula seguinte é o "link", como no trio (pode ser "por telefone").
-      (aberta || abrir()).link = texto;
-      aberta = null;
+      var comLink = aberta && !aberta.link ? aberta : abrir();
+      comLink.link = texto;
+      // Sem hora ainda, a etapa fica aberta: a hora pode vir depois do link.
+      if (!comLink.semHora) aberta = null;
     } else if (aberta && aberta.data && aberta.semHora && pareceHora(texto)) {
       var hora = lerHora(texto);
       aberta.data.setHours(hora.h, hora.min);
